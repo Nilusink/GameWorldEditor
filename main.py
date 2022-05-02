@@ -2,6 +2,8 @@ from objects import Floor, Destroyable, Turret
 from fractions import Fraction
 from PIL import Image, ImageTk
 import tkinter as tk
+import typing as tp
+import json
 
 
 WORLD_SIZE: tuple[float, float] = (1920, 1080)
@@ -20,6 +22,7 @@ def from_rgb(rgb):
 
 
 class Window(tk.Tk):
+    world_bg: tuple = (100, 100, 200)
     now_frame: tk.Frame = ...
     icon_size: int = 128
     scale: float = 1
@@ -66,7 +69,7 @@ class Window(tk.Tk):
         # create canvases
         self.objects_can = tk.Canvas(self.main_frame, bg="gray24")
         self.game_can_center = tk.Canvas(self.main_frame)
-        self.game_can = tk.Canvas(self.game_can_center, bg=from_rgb((100, 100, 200)))
+        self.game_can = tk.Canvas(self.game_can_center, bg=from_rgb(self.world_bg))
 
         # pack canvases
         self.objects_can.grid(column=0, row=0, sticky="nsew")
@@ -152,7 +155,29 @@ class Window(tk.Tk):
     def close_options(self, *_trash) -> None:
         self.object_settings.withdraw()
 
+    def export_world(self, name: str) -> None:
+        out: dict[str, tp.Any] = {
+            "name": name,
+            "background": list(self.world_bg) + [255],
+            "objects": []
+        }
+
+        for element in self.placed_objects:
+            tmp: dict[str, tp.Any] = {
+                "type": type(element).__name__
+            }
+            for attribute in element.__dict__.keys():
+                attribute: str
+                if not attribute.startswith("__"):
+                    tmp[attribute] = element.__dict__[attribute]
+
+            out["objects"].append(tmp)
+
+        with open(name+".json", "w") as outfile:
+            json.dump(out, outfile, indent=4)
+
     def end(self, *_trash) -> None:
+        self.export_world(name="backup")
         self.destroy()
 
 
